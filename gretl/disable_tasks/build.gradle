@@ -1,0 +1,132 @@
+buildscript {
+    repositories {
+        mavenLocal()      
+        maven {
+            url "http://jars.interlis.ch"
+        }
+        maven {
+            url "http://download.osgeo.org/webdav/geotools/"
+        }
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }        
+        mavenCentral()
+        jcenter()
+    }  
+}
+
+plugins {
+    id "de.undercouch.download" version "3.4.3"
+    id "ch.so.agi.gretl" version "1.0.5-SNAPSHOT"
+}
+
+description = """\n
+Proof of concept für den AV-Import. Die Schwierigkeit besteht
+darin, dass man nicht immer alle Gemeinden herunterlädt und/oder
+alle Gemeinden importiert etc. Es gibt verschiedene Lösungsansätze.
+Gemein haben sie, dass man erst in der Exekutionsphase weiss, 
+welche Gemeinden vorhanden sind.
+
+gradle downloadDataSet_2549 disable_2549 unzipDataSet_2549
+gradle disable_2549 unzipDataSet_2549
+
+Beide Builds sind erfolgreich. Beim zweiten wird der Unzip-Task
+nicht mehr durchgeführt, da er im disable-Task deaktiviert wurde.
+"""
+
+import ch.so.agi.gretl.tasks.*
+import ch.so.agi.gretl.api.TransferSet
+import java.nio.file.Paths
+
+// Download- und Unzip-Verzeichnis
+def pathToTempFolder = System.getProperty("java.io.tmpdir")
+def pathToUnzipFolder = Paths.get(pathToTempFolder, 'unzip_data')
+
+// Amtliche Vermessung
+// Simuliert plusminus vorhandene resp. nicht vorhanden Daten im Infogrips-FTP
+def fosnrs = [2401,2402,2403,2404,2405,2406,2407,2408,2421,2422,2423,2424,2425,2426,2427,2428,2429,2445,2455,2456,2457,2461,2463,2464,2465,2471,2472,2473,2474,2475,2476,2477,2478,2479,2480,2481,2491,2492,2493,2495,2497,2498,2499,2500,2501,2502,2503,2511,2513,2514,2516,2517,2518,2519,2520,2523,2524,2525,2526,2527,2528,2529,2530,2532,2534,2535,2541,2542,2543,2544,2545,2546,2547,2548,2549,2550,2551,2553,2554,2555,2556,2571,2572,2573,2574,2575,2576,2578,2579,2580,2581,2582,2583,2584,2585,2586,2601,2611,2612,2613,2614,2615,2616,2617,2618,2619,2620,2621,2622]
+//def cadastralSurveyingDataSets = [2457,2498,2502,2546,2580,2601,2614]
+def dataSets = [2524,2549]
+def baseUrl = "http://geoweb.so.ch/av_datenabgabe/av_daten/itf_so/"
+
+def GROUP = "AV-Import"
+
+// Herunterladen der Daten. Es wird immer alles per FTP heruntergeladen (*).
+// Dementsprechend kann ich zum Zeitpunkt der Konfigurationsphase
+// noch nicht wissen welche Tasks es eigenetlich geben wird.
+// Frage: Gibt es ein FTP-Task (*) oder 109? Bei letzterm könnten man den
+// disabler bereits in den Task packen. Kommt wohl auch darauf an, was der 
+// FTP-Task liefert, wenn gewünschte Datei nicht vorhanden ist.
+dataSets.each { dataSet ->
+    def fosnr = dataSet.toString()
+    task "downloadDataSet_$fosnr"(type: Download) {
+        group = GROUP
+        src baseUrl + dataSet + "00.zip"
+        dest pathToTempFolder
+        overwrite true
+
+        doLast {
+            println "File downloaded to: " + pathToTempFolder
+        }        
+    }
+}
+
+task downloadDataSet() {
+    description = "Aggregationstask für das Herunterladen sämtlicher AV-Daten."
+    group = GROUP
+    doLast {
+        println "All dynamic tasks were performed."
+    }
+}
+
+downloadDataSet.dependsOn {
+    tasks.findAll { task -> task.name.startsWith('downloadDataSet_') }
+}
+
+// Disabler: Findet heraus welche Tasks deaktiviert werden müssen, 
+// da keine entsprechende Datei heruntergeladen wurde.
+dataSets.each { dataSet ->
+    def fosnr = dataSet.toString()
+    //task "disable_$fosnr"(dependsOn: "downloadDataSet_$dataSet") { // Falls es nur einen FTP-Task gibt, muss es nur von diesem Abhängig sein.
+    task "disable_$fosnr"() {
+        group = GROUP
+        doLast {
+            // Falls die Datei nicht vorhanden ist, deaktiere sämtliche Tasks mit BFS-Nr
+            // im Tasknamen und die noch nicht exekutiert wurden und nicht "this"-Task sind.
+            def file = file(Paths.get(pathToTempFolder.toString(), dataSet + "00.zip"))
+            if (!file.exists()) {
+                this.getProject().getTasks().each { task ->
+                    if (task.getName().endsWith(fosnr) && !task.getState().getExecuted() && !task.getName().equalsIgnoreCase(name)) {
+                        task.enabled = false
+                        println "disabling task: " + task.getName()
+                    }
+                }
+            }
+        }        
+    }
+}
+
+// TODO: do I need a aggregation task for the disabler?
+// Where else do I need a aggregation task? 
+
+// Unzippen der Daten
+dataSets.each { dataSet ->
+    def fosnr = dataSet as String
+    task "unzipDataSet_$fosnr"(type: Copy) { // TODO: dependsOn
+        group = GROUP
+        from zipTree(Paths.get(pathToTempFolder, dataSet + "00.zip"))
+        into file(pathToUnzipFolder)
+        include "**/*.itf" // TODO: make this case insensitive
+        rename { String fileName ->
+            // Brauche ich nicht. Stammt von Bundes-ÖREB-Daten, die noch einen Timestamp appended bekommen.
+            // Unsere ITF-Namen sind statisch.
+            //if (fileName.contains(dataSet)) {
+            //    return dataSet + "00.itf"
+            //}
+            return fileName
+        } 
+        doLast {
+            println "File unzipped to directory: " + pathToUnzipFolder
+        }          
+    }
+}
