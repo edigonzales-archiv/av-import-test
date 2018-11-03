@@ -57,6 +57,11 @@ def GROUP = "AV-Import"
 // Frage: Gibt es ein FTP-Task (*) oder 109? Bei letzterm könnten man den
 // disabler bereits in den Task packen. Kommt wohl auch darauf an, was der 
 // FTP-Task liefert, wenn gewünschte Datei nicht vorhanden ist.
+// Testen: Heruntergeladenes File vom FTP-Task ist ein Property. Prüfen, ob
+// man damit gerade etwas prüfen kann. Am wichtigsten ist wohl das Verhalten
+// des FTP-Tasks. Kann FTPClient wissen, ob Pfad ein Verzeichnis ist oder
+// eine Datei? Wohl über "listNames" oder so gehen und schauen was das
+// zurückliefert.
 dataSets.each { dataSet ->
     def fosnr = dataSet.toString()
     task "downloadDataSet_$fosnr"(type: Download) {

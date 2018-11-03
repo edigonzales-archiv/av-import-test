@@ -63,6 +63,9 @@ task fubar() {
             println it.getSize()
         }
 
+
+        // TODO: what happens when file does not exist?
+
         ftpClient.disconnect()
 
         // read only
