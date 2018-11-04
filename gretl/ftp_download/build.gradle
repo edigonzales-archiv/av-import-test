@@ -21,6 +21,7 @@ buildscript {
 plugins {
     id "de.undercouch.download" version "3.4.3"
     id "ch.so.agi.gretl" version "1.0.5-SNAPSHOT"
+    id 'org.hidetake.ssh' version '2.9.0'
 }
 
 description = """\n
@@ -48,7 +49,7 @@ task fubar() {
         def ftpClient = new FTPClient()
         ftpClient.connect("ftp.infogrips.ch", 21)
 
-        if (!ftpClient.login("xxxxxx", "yyyyyyy")) {
+        if (!ftpClient.login("yyyyyyyyy", "xxxxxxx")) {
             ftpClient.disconnect()
             throw new IOException("Could not login to ftp server.")
         }
@@ -56,24 +57,48 @@ task fubar() {
         println reply
 
         //Collection<String> files = ftpClient.listFiles("");
-        def files = ftpClient.listFiles("DM01AVSO24LV95_2/itf");
-        //def files = ftpClient.listNames("DM01AVSO24LV95/itf");
+        //def files = ftpClient.listFiles("DM01AVSO24LV95/itf");
+        def files = ftpClient.listNames("DM01AVSO24LV95/itf");
         //println files
         files.each {
-            println it.getSize()
+            //println it.getSize()
+            //println it.getName()
+            println it
         }
+        //File outFile = new File()
+        String outPathName = "/Users/stefan/tmp/"
+        String outFileName = "240200.zip"
 
+        if (!files.contains(outFileName)) {
+            println "not found on server -> stop "
+            return
+        }
+        println files.contains(outFileName)
+
+        FileOutputStream out = new FileOutputStream("/Users/stefan/tmp/240200.zip")
+        ftpClient.retrieveFile("/DM01AVSO24LV95/itf/240200.zip", out)
+
+
+        println out.getChannel().size()
+
+
+        println "fubar"
+
+
+        // zip file grösse überprüfen > 0
 
         // TODO: what happens when file does not exist?
 
         ftpClient.disconnect()
 
         // read only
+        /*
         String ftpUrl = "ftp://xxxxxxx:yyyyyyy@ftp.infogrips.ch:21/DM01AVSO24LV95/itf/258100.zip"
         URLConnection urlConnection = new URL(ftpUrl).openConnection()
         InputStream inputStream = urlConnection.getInputStream()
         Files.copy(inputStream, new File("/Users/stefan/tmp/fubar.zip").toPath())
         inputStream.close()
+        */
     }
-
 }
+

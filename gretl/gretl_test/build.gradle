@@ -1,0 +1,42 @@
+buildscript {
+    repositories {
+        mavenLocal()      
+        maven {
+            url "http://jars.interlis.ch"
+        }
+        maven {
+            url "http://download.osgeo.org/webdav/geotools/"
+        }
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }        
+        mavenCentral()
+        jcenter()
+    }    
+}
+
+plugins {
+    id "ch.so.agi.gretl" version "1.0.5-SNAPSHOT"
+}
+
+description = """\n
+GRETL testing....
+"""
+
+import ch.so.agi.gretl.tasks.*
+import ch.so.agi.gretl.api.TransferSet
+import java.nio.file.Paths
+import java.nio.file.Files
+
+task fubar(type: FTPDownload) {
+    host = 'ftp.infogrips.ch'
+    username = 'aaaaaa'
+    password = 'bbbbbb'
+    dataFile = '/DM01AVSO24LV95/itf/240200.zip'
+    downloadDirectory = '/Users/stefan/tmp'
+
+    doLast {
+        // if file exists
+        println "File downloaded to: "
+    }
+}

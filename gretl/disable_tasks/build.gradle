@@ -122,6 +122,7 @@ dataSets.each { dataSet ->
         from zipTree(Paths.get(pathToTempFolder, dataSet + "00.zip"))
         into file(pathToUnzipFolder)
         include "**/*.itf" // TODO: make this case insensitive
+        caseSensitive = false
         rename { String fileName ->
             // Brauche ich nicht. Stammt von Bundes-ÖREB-Daten, die noch einen Timestamp appended bekommen.
             // Unsere ITF-Namen sind statisch.
